@@ -1,0 +1,56 @@
+import type { CSSProperties } from "react"
+
+export const illustrationStyles = {
+  bg: { fill: "var(--accent, #E0E7FF)" },
+  bgc: { fill: "var(--status-critical-bg, #FFE4E6)" },
+  cd: {
+    fill: "var(--card, #FFFFFF)",
+    stroke: "var(--border, #E2E8F0)",
+    strokeWidth: 2,
+  },
+  pr: { fill: "var(--primary, #4F46E5)" },
+  pf: { fill: "var(--primary-foreground, #FFFFFF)" },
+  in: { fill: "var(--muted, #F1F5F9)" },
+  ln: { fill: "var(--border, #E2E8F0)" },
+  sh: { fill: "var(--shadow-color, #0F172A)", opacity: 0.08 },
+  okc: { fill: "var(--status-resolved-fg, #065F46)" },
+  crc: { fill: "var(--status-critical-fg, #9F1239)" },
+  pgb: { fill: "var(--status-progress-bg, #E0F2FE)" },
+  pgc: { fill: "var(--status-progress-fg, #075985)" },
+  rsb: { fill: "var(--status-resolved-bg, #D1FAE5)" },
+  rsc: { fill: "var(--status-resolved-fg, #065F46)" },
+  rpc: { fill: "var(--status-reported-fg, #92400E)" },
+  ck: {
+    fill: "none",
+    stroke: "var(--card, #FFFFFF)",
+    strokeWidth: 7,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  },
+  pk: {
+    fill: "none",
+    stroke: "var(--primary-foreground, #FFFFFF)",
+    strokeWidth: 6,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  },
+  hd: {
+    fill: "none",
+    stroke: "var(--primary, #4F46E5)",
+    strokeWidth: 12,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  },
+  tri: {
+    fill: "var(--card, #FFFFFF)",
+    stroke: "var(--status-critical-fg, #9F1239)",
+    strokeWidth: 10,
+    strokeLinejoin: "round",
+  },
+  pls: {
+    fill: "none",
+    stroke: "var(--primary, #4F46E5)",
+    strokeWidth: 4,
+    strokeLinecap: "round",
+  },
+} satisfies Record<string, CSSProperties>
