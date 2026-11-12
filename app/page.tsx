@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
+import { logoutAction } from "@/lib/actions"
 import { createClient } from "@/lib/supabase/server"
-import { logoutAction } from "./actions"
 
 export default async function HomePage() {
   const supabase = await createClient()

@@ -3,8 +3,8 @@ import { redirect } from "next/navigation"
 
 import { LogoWordmark } from "@/components/illustrations"
 import { Button } from "@/components/ui/button"
+import { logoutAction } from "@/lib/actions"
 import { createClient } from "@/lib/supabase/server"
-import { logoutAction } from "../actions"
 
 function getInitials(name: string) {
   const initials = name
