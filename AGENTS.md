@@ -1,6 +1,6 @@
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
@@ -58,6 +58,8 @@ proxy.ts        refreshes the Supabase session only
 ```
 
 Default landing by role after login: user goes to My faults, technician to My assignments, admin to Faults overview. Screens compose components and call server code. They hold no business rules.
+
+User routes: /faults (My faults), /faults/new (report a fault), /faults/[id] (details). / redirects by role.
 
 ## Roles, data and security rules
 

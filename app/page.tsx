@@ -2,14 +2,7 @@ import { redirect } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/server"
-
-export async function logoutAction() {
-  "use server"
-
-  const supabase = await createClient()
-  await supabase.auth.signOut()
-  redirect("/login")
-}
+import { logoutAction } from "./actions"
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -21,14 +14,21 @@ export default async function HomePage() {
   }
 
   const userId = claims.sub
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from("profiles")
     .select("display_name, role")
     .eq("id", userId)
     .maybeSingle()
 
+  if (error) {
+    throw error
+  }
+
   const displayName = profile?.display_name ?? claims.email ?? "User"
-  const role = profile?.role ?? "user"
+
+  if (profile?.role === "user") {
+    redirect("/faults")
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-6">
@@ -37,7 +37,9 @@ export default async function HomePage() {
         <h1 className="mt-4 font-heading text-[2.5rem] leading-none tracking-[-0.06em] text-foreground">
           {displayName}
         </h1>
-        <p className="mt-4 text-lg text-muted-foreground">Role: {String(role)}</p>
+        <p className="mt-4 text-lg text-muted-foreground">
+          Role: {profile?.role ?? "Unavailable"}
+        </p>
 
         <form action={logoutAction} className="mt-8">
           <Button type="submit" className="w-full rounded-[16px] bg-primary px-6 py-3 text-base font-semibold text-primary-foreground hover:bg-primary/90">
