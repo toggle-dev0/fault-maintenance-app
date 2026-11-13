@@ -90,6 +90,7 @@ export default async function FaultsPage({
     filter?: string | string[]
     new?: string | string[]
     photos?: string | string[]
+    cleanup?: string | string[]
   }>
 }) {
   const params = await searchParams
@@ -99,6 +100,8 @@ export default async function FaultsPage({
       ? params.new
       : null
   const photoUploadFailed = newFaultId !== null && params.photos === "failed"
+  const photoCleanupFailed =
+    photoUploadFailed && params.cleanup === "failed"
   const activeFilter =
     (typeof requestedFilter === "string" &&
       FILTER_OPTIONS.find((option) => option.value === requestedFilter)) ||
@@ -158,6 +161,9 @@ export default async function FaultsPage({
           <span>Report submitted.</span>
           {photoUploadFailed ? (
             <span>Some photos could not be uploaded.</span>
+          ) : null}
+          {photoCleanupFailed ? (
+            <span>Some uploaded photo files could not be removed.</span>
           ) : null}
           <Link
             href="/faults"

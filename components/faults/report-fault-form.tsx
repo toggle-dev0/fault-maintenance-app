@@ -140,7 +140,6 @@ export function ReportFaultForm() {
     setProgress("Submitting...")
 
     if (
-      photoError ||
       photos.length > MAX_PHOTOS ||
       photos.some((photo) => photo.error)
     ) {
@@ -224,6 +223,7 @@ export function ReportFaultForm() {
 
       const faultId = result.faultId
       let photoUploadFailed = false
+      let photoCleanupFailed = false
 
       if (resizedPhotos.length > 0) {
         let supabase: ReturnType<typeof createSupabaseBrowserClient> | undefined
@@ -261,16 +261,19 @@ export function ReportFaultForm() {
 
           if (supabase && uploadedPaths.length > 0) {
             try {
-              await supabase.storage.from("fault-photos").remove(uploadedPaths)
+              const { error } = await supabase.storage
+                .from("fault-photos")
+                .remove(uploadedPaths)
+              photoCleanupFailed = Boolean(error)
             } catch {
-              // Keep the report flow moving even if storage cleanup is unavailable.
+              photoCleanupFailed = true
             }
           }
         }
       }
 
       router.replace(
-        `/faults?new=${faultId}${photoUploadFailed ? "&photos=failed" : ""}`
+        `/faults?new=${faultId}${photoUploadFailed ? "&photos=failed" : ""}${photoCleanupFailed ? "&cleanup=failed" : ""}`
       )
     })
   })
@@ -500,7 +503,9 @@ export function ReportFaultForm() {
           onDragOver={(event) => event.preventDefault()}
           onDrop={(event) => {
             event.preventDefault()
-            addPhotos(event.dataTransfer.files)
+            if (!isPending) {
+              addPhotos(event.dataTransfer.files)
+            }
           }}
           className="rounded-[16px] border-2 border-dashed border-input bg-card px-4 py-6 text-center sm:px-6 sm:py-8"
         >
