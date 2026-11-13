@@ -10,6 +10,7 @@ const reportedStatus = FAULT_STATUSES[0]
 const assignedStatus = FAULT_STATUSES[1]
 const inProgressStatus = FAULT_STATUSES[2]
 const resolvedStatus = FAULT_STATUSES[3]
+const UUID_PATTERN = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i
 
 const FILTER_OPTIONS = [
   {
@@ -85,10 +86,17 @@ function getAssignmentText(
 export default async function FaultsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string | string[] }>
+  searchParams: Promise<{
+    filter?: string | string[]
+    new?: string | string[]
+  }>
 }) {
   const params = await searchParams
   const requestedFilter = params.filter
+  const newFaultId =
+    typeof params.new === "string" && UUID_PATTERN.test(params.new)
+      ? params.new
+      : null
   const activeFilter =
     (typeof requestedFilter === "string" &&
       FILTER_OPTIONS.find((option) => option.value === requestedFilter)) ||
@@ -139,6 +147,22 @@ export default async function FaultsPage({
           Report a fault
         </Link>
       </div>
+
+      {newFaultId ? (
+        <div
+          role="status"
+          className="mt-5 flex items-center justify-between gap-4 rounded-[16px] border border-primary bg-primary/5 px-4 py-3 text-sm font-medium text-foreground"
+        >
+          <span>Report submitted.</span>
+          <Link
+            href="/faults"
+            aria-label="Dismiss report confirmation"
+            className="shrink-0 font-semibold text-primary hover:underline"
+          >
+            Dismiss
+          </Link>
+        </div>
+      ) : null}
 
       <nav
         aria-label="Filter faults"
@@ -207,7 +231,9 @@ export default async function FaultsPage({
             return (
               <li
                 key={fault.id}
-                className="flex flex-col gap-4 rounded-[24px] border border-border bg-card p-5 shadow-[var(--shadow-floating)] dark:shadow-none sm:flex-row sm:items-center sm:justify-between"
+                className={`flex flex-col gap-4 rounded-[24px] border ${
+                  fault.id === newFaultId ? "border-primary" : "border-border"
+                } bg-card p-5 shadow-[var(--shadow-floating)] dark:shadow-none sm:flex-row sm:items-center sm:justify-between`}
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3 sm:block">
