@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
+import { unstable_rethrow } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -63,7 +64,8 @@ export function ReportFaultForm() {
         }
 
         setFormError(result.error ?? "")
-      } catch {
+      } catch (error) {
+        unstable_rethrow(error)
         setFormError(REPORT_FAULT_FAILURE_MESSAGE)
       }
     })
