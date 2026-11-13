@@ -1,6 +1,6 @@
 import Link from "next/link"
 
-import { ReportFaultForm } from "./report-fault-form"
+import { ReportFaultForm } from "@/components/faults"
 
 export default function NewFaultPage() {
   return (

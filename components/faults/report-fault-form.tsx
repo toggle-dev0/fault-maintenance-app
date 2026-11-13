@@ -17,13 +17,14 @@ import {
   PRIORITY_LABELS,
 } from "@/types/fault"
 
-import { reportFaultAction } from "./actions"
+import { reportFaultAction } from "@/lib/faults/actions"
 import {
   INITIAL_REPORT_FAULT_VALUES,
   REPORT_FAULT_FIELDS,
+  REPORT_FAULT_FAILURE_MESSAGE,
   reportFaultSchema,
   type ReportFaultValues,
-} from "./schema"
+} from "@/lib/faults/report-schema"
 
 const fieldClassName =
   "h-12 rounded-[16px] border border-input bg-input/70 px-4 text-base text-foreground placeholder:text-muted-foreground"
@@ -49,18 +50,22 @@ export function ReportFaultForm() {
     }
 
     startTransition(async () => {
-      const result = await reportFaultAction(formData)
+      try {
+        const result = await reportFaultAction(formData)
 
-      if (result.fieldErrors) {
-        for (const field of REPORT_FAULT_FIELDS) {
-          const message = result.fieldErrors[field]
-          if (message) {
-            form.setError(field, { type: "server", message })
+        if (result.fieldErrors) {
+          for (const field of REPORT_FAULT_FIELDS) {
+            const message = result.fieldErrors[field]
+            if (message) {
+              form.setError(field, { type: "server", message })
+            }
           }
         }
-      }
 
-      setFormError(result.error ?? "")
+        setFormError(result.error ?? "")
+      } catch {
+        setFormError(REPORT_FAULT_FAILURE_MESSAGE)
+      }
     })
   })
 

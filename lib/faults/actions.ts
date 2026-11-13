@@ -6,9 +6,10 @@ import { createClient } from "@/lib/supabase/server"
 
 import {
   REPORT_FAULT_FIELDS,
+  REPORT_FAULT_FAILURE_MESSAGE,
   reportFaultSchema,
   type ReportFaultFieldErrors,
-} from "./schema"
+} from "./report-schema"
 
 export type ReportFaultActionResult = {
   fieldErrors?: ReportFaultFieldErrors
@@ -72,7 +73,7 @@ export async function reportFaultAction(
     .single()
 
   if (error) {
-    return { error: "Unable to submit the report. Please try again." }
+    return { error: REPORT_FAULT_FAILURE_MESSAGE }
   }
 
   redirect(`/faults?new=${data.id}`)

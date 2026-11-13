@@ -5,6 +5,9 @@ import {
   FAULT_PRIORITIES,
 } from "@/types/fault"
 
+export const REPORT_FAULT_FAILURE_MESSAGE =
+  "Unable to submit the report. Please try again."
+
 export const reportFaultSchema = z.object({
   title: z
     .string()
