@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
@@ -11,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
+import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client"
 import {
   CATEGORY_LABELS,
   FAULT_CATEGORIES,
@@ -18,7 +21,7 @@ import {
   PRIORITY_LABELS,
 } from "@/types/fault"
 
-import { reportFaultAction } from "@/lib/faults/actions"
+import { recordPhotos, reportFaultAction } from "@/lib/faults/actions"
 import {
   INITIAL_REPORT_FAULT_VALUES,
   REPORT_FAULT_FIELDS,
@@ -33,17 +36,116 @@ const fieldClassName =
 const actionLinkClassName =
   "inline-flex h-12 items-center justify-center rounded-[16px] bg-secondary px-6 text-base font-semibold text-secondary-foreground hover:bg-secondary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
 
+const MAX_PHOTOS = 3
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024
+const ACCEPTED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
+
+type SelectedPhoto = {
+  file: File
+  previewUrl: string
+  error?: string
+}
+
+async function resizePhoto(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file, {
+    imageOrientation: "from-image",
+  })
+  const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height))
+  const canvas = document.createElement("canvas")
+  canvas.width = Math.round(bitmap.width * scale)
+  canvas.height = Math.round(bitmap.height * scale)
+  const context = canvas.getContext("2d")
+
+  try {
+    if (!context) {
+      throw new Error("Unable to process this photo.")
+    }
+
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+
+    return await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob)
+          } else {
+            reject(new Error("Unable to process this photo."))
+          }
+        },
+        "image/jpeg",
+        0.82
+      )
+    })
+  } finally {
+    bitmap.close()
+    canvas.width = 0
+    canvas.height = 0
+  }
+}
+
 export function ReportFaultForm() {
+  const router = useRouter()
   const [formError, setFormError] = useState("")
+  const [photos, setPhotos] = useState<SelectedPhoto[]>([])
+  const [photoError, setPhotoError] = useState("")
+  const [progress, setProgress] = useState("")
   const [isPending, startTransition] = useTransition()
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const previewUrls = useRef(new Set<string>())
   const form = useForm<ReportFaultValues>({
     resolver: zodResolver(reportFaultSchema),
     defaultValues: INITIAL_REPORT_FAULT_VALUES,
   })
 
+  useEffect(
+    () => () => {
+      for (const previewUrl of previewUrls.current) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    },
+    []
+  )
+
+  function addPhotos(files: FileList | File[]) {
+    const selectedFiles = Array.from(files)
+    const validFiles = selectedFiles.filter((file) =>
+      ACCEPTED_PHOTO_TYPES.has(file.type)
+    )
+    const hasInvalidType = validFiles.length !== selectedFiles.length
+
+    setPhotoError(
+      hasInvalidType ? "Choose photos in JPEG, PNG, or WebP format." : ""
+    )
+    setPhotos((currentPhotos) => [
+      ...currentPhotos,
+      ...validFiles.map((file) => {
+        const previewUrl = URL.createObjectURL(file)
+        previewUrls.current.add(previewUrl)
+        return { file, previewUrl }
+      }),
+    ])
+  }
+
+  function removePhoto(photoToRemove: SelectedPhoto) {
+    URL.revokeObjectURL(photoToRemove.previewUrl)
+    previewUrls.current.delete(photoToRemove.previewUrl)
+    setPhotos((currentPhotos) =>
+      currentPhotos.filter((photo) => photo !== photoToRemove)
+    )
+  }
+
   const onSubmit = form.handleSubmit((values) => {
     setFormError("")
     form.clearErrors()
+    setProgress("Submitting...")
+
+    if (
+      photos.length > MAX_PHOTOS ||
+      photos.some((photo) => photo.error)
+    ) {
+      setProgress("")
+      return
+    }
 
     const formData = new FormData()
     for (const field of REPORT_FAULT_FIELDS) {
@@ -51,8 +153,49 @@ export function ReportFaultForm() {
     }
 
     startTransition(async () => {
+      const resizedPhotos: Blob[] = []
+
+      for (let index = 0; index < photos.length; index += 1) {
+        try {
+          const resizedPhoto = await resizePhoto(photos[index].file)
+
+          if (resizedPhoto.size > MAX_PHOTO_SIZE) {
+            setPhotos((currentPhotos) =>
+              currentPhotos.map((photo) =>
+                photo === photos[index]
+                  ? {
+                      ...photo,
+                      error: "This photo is still over 5 MB after resizing.",
+                    }
+                  : photo,
+              ),
+            )
+            setProgress("")
+            return
+          }
+
+          resizedPhotos.push(resizedPhoto)
+        } catch {
+          setPhotos((currentPhotos) =>
+            currentPhotos.map((photo) =>
+              photo === photos[index]
+                ? {
+                    ...photo,
+                    error:
+                      "This photo could not be decoded. Choose a JPEG, PNG, or WebP image.",
+                  }
+                : photo,
+            ),
+          )
+          setProgress("")
+          return
+        }
+      }
+
+      let result
+
       try {
-        const result = await reportFaultAction(formData)
+        result = await reportFaultAction(formData)
 
         if (result.fieldErrors) {
           for (const field of REPORT_FAULT_FIELDS) {
@@ -61,13 +204,77 @@ export function ReportFaultForm() {
               form.setError(field, { type: "server", message })
             }
           }
+
+          setProgress("")
+          return
         }
 
-        setFormError(result.error ?? "")
+        if (result.error || !result.faultId) {
+          setFormError(result.error ?? REPORT_FAULT_FAILURE_MESSAGE)
+          setProgress("")
+          return
+        }
       } catch (error) {
         unstable_rethrow(error)
         setFormError(REPORT_FAULT_FAILURE_MESSAGE)
+        setProgress("")
+        return
       }
+
+      const faultId = result.faultId
+      let photoUploadFailed = false
+      let photoCleanupFailed = false
+
+      if (resizedPhotos.length > 0) {
+        let supabase: ReturnType<typeof createSupabaseBrowserClient> | undefined
+        const uploadedPaths: string[] = []
+
+        try {
+          supabase = createSupabaseBrowserClient()
+
+          for (let index = 0; index < resizedPhotos.length; index += 1) {
+            setProgress(
+              `Uploading photo ${index + 1} of ${resizedPhotos.length}`
+            )
+            const path = `${faultId}/${crypto.randomUUID()}.jpg`
+            const { error } = await supabase.storage
+              .from("fault-photos")
+              .upload(path, resizedPhotos[index], {
+                contentType: "image/jpeg",
+                upsert: false,
+              })
+
+            if (error) {
+              throw new Error("Photo upload failed.")
+            }
+
+            uploadedPaths.push(path)
+          }
+
+          const recordResult = await recordPhotos(faultId, uploadedPaths)
+
+          if (!recordResult.success) {
+            throw new Error("Photo records could not be saved.")
+          }
+        } catch {
+          photoUploadFailed = true
+
+          if (supabase && uploadedPaths.length > 0) {
+            try {
+              const { error } = await supabase.storage
+                .from("fault-photos")
+                .remove(uploadedPaths)
+              photoCleanupFailed = Boolean(error)
+            } catch {
+              photoCleanupFailed = true
+            }
+          }
+        }
+      }
+
+      router.replace(
+        `/faults?new=${faultId}${photoUploadFailed ? "&photos=failed" : ""}${photoCleanupFailed ? "&cleanup=failed" : ""}`
+      )
     })
   })
 
@@ -86,6 +293,12 @@ export function ReportFaultForm() {
           {formError}
         </p>
       ) : null}
+      <p
+        aria-live="polite"
+        className={progress ? "text-sm text-muted-foreground" : "sr-only"}
+      >
+        {progress}
+      </p>
 
       <div className="space-y-2">
         <Label htmlFor="fault-title">What is the fault?</Label>
@@ -269,6 +482,97 @@ export function ReportFaultForm() {
             {form.formState.errors.description.message}
           </p>
         ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="fault-photos">Photos (optional)</Label>
+        <input
+          ref={photoInputRef}
+          id="fault-photos"
+          type="file"
+          multiple
+          accept="image/jpeg,image/png,image/webp"
+          className="sr-only"
+          disabled={isPending}
+          onChange={(event) => {
+            addPhotos(event.currentTarget.files ?? [])
+            event.currentTarget.value = ""
+          }}
+        />
+        <div
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault()
+            if (!isPending) {
+              addPhotos(event.dataTransfer.files)
+            }
+          }}
+          className="rounded-[16px] border-2 border-dashed border-input bg-card px-4 py-6 text-center sm:px-6 sm:py-8"
+        >
+          <p className="text-sm text-muted-foreground sm:hidden">
+            Tap to add photos. Up to 3 images.
+          </p>
+          <p className="hidden text-sm text-muted-foreground sm:block">
+            Drop photos here or browse. Up to 3 images.
+          </p>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={isPending}
+            onClick={() => photoInputRef.current?.click()}
+            className="mt-3 h-11 min-w-11 rounded-[16px] px-4"
+          >
+            browse
+          </Button>
+        </div>
+        {photos.length > 0 ? (
+          <ul className="space-y-2">
+            {photos.map((photo, index) => (
+              <li
+                key={photo.previewUrl}
+                className="flex items-center gap-3 rounded-[16px] border border-border bg-card p-3"
+              >
+                <Image
+                  src={photo.previewUrl}
+                  alt=""
+                  width={56}
+                  height={56}
+                  unoptimized
+                  className="h-14 w-14 rounded-[12px] object-cover"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">
+                    Photo {index + 1}
+                  </p>
+                  {photo.error ? (
+                    <p role="alert" className="text-sm text-destructive">
+                      {photo.error}
+                    </p>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  aria-label={`Remove photo ${index + 1}`}
+                  disabled={isPending}
+                  onClick={() => removePhoto(photo)}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] text-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {[
+          photoError,
+          photos.length > MAX_PHOTOS ? "Choose no more than 3 photos." : "",
+        ]
+          .filter(Boolean)
+          .map((message) => (
+            <p key={message} role="alert" className="text-sm text-destructive">
+              {message}
+            </p>
+          ))}
       </div>
 
       <div className="hidden justify-end gap-3 border-t border-border pt-6 sm:flex">

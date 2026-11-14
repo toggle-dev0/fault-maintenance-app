@@ -1,6 +1,7 @@
 "use server"
 
 import { redirect } from "next/navigation"
+import { z } from "zod"
 
 import { createClient } from "@/lib/supabase/server"
 
@@ -14,7 +15,10 @@ import {
 export type ReportFaultActionResult = {
   fieldErrors?: ReportFaultFieldErrors
   error?: string
+  faultId?: string
 }
+
+const faultIdSchema = z.string().uuid()
 
 function getFieldValue(formData: FormData, field: string) {
   const value = formData.get(field)
@@ -76,5 +80,55 @@ export async function reportFaultAction(
     return { error: REPORT_FAULT_FAILURE_MESSAGE }
   }
 
-  redirect(`/faults?new=${data.id}`)
+  return { faultId: data.id }
+}
+
+export async function recordPhotos(
+  faultId: string,
+  paths: string[]
+): Promise<{ success: boolean }> {
+  const parsedFaultId = faultIdSchema.safeParse(faultId)
+
+  if (!parsedFaultId.success) {
+    return { success: false }
+  }
+
+  const pathSchema = z
+    .array(
+      z
+        .string()
+        .regex(
+          new RegExp(
+            `^${parsedFaultId.data}/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\\.jpg$`,
+          )
+        )
+    )
+    .max(3)
+  const parsedPaths = pathSchema.safeParse(paths)
+
+  if (!parsedPaths.success) {
+    return { success: false }
+  }
+
+  const supabase = await createClient()
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const claims = claimsData?.claims
+
+  if (!claims) {
+    redirect("/login")
+  }
+
+  if (parsedPaths.data.length === 0) {
+    return { success: true }
+  }
+
+  const { error } = await supabase.from("fault_photos").insert(
+    parsedPaths.data.map((storage_path) => ({
+      fault_id: parsedFaultId.data,
+      storage_path,
+      uploaded_by: claims.sub,
+    })),
+  )
+
+  return { success: !error }
 }

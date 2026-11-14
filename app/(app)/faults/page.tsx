@@ -89,6 +89,8 @@ export default async function FaultsPage({
   searchParams: Promise<{
     filter?: string | string[]
     new?: string | string[]
+    photos?: string | string[]
+    cleanup?: string | string[]
   }>
 }) {
   const params = await searchParams
@@ -97,6 +99,9 @@ export default async function FaultsPage({
     typeof params.new === "string" && UUID_PATTERN.test(params.new)
       ? params.new
       : null
+  const photoUploadFailed = newFaultId !== null && params.photos === "failed"
+  const photoCleanupFailed =
+    photoUploadFailed && params.cleanup === "failed"
   const activeFilter =
     (typeof requestedFilter === "string" &&
       FILTER_OPTIONS.find((option) => option.value === requestedFilter)) ||
@@ -154,6 +159,12 @@ export default async function FaultsPage({
           className="mt-5 flex items-center justify-between gap-4 rounded-[16px] border border-primary bg-primary/5 px-4 py-3 text-sm font-medium text-foreground"
         >
           <span>Report submitted.</span>
+          {photoUploadFailed ? (
+            <span>Some photos could not be uploaded.</span>
+          ) : null}
+          {photoCleanupFailed ? (
+            <span>Some uploaded photo files could not be removed.</span>
+          ) : null}
           <Link
             href="/faults"
             aria-label="Dismiss report confirmation"
