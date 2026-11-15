@@ -1,24 +1,114 @@
 "use client"
 
 import * as React from "react"
-import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes"
 
-function ThemeProvider({
-  children,
-  ...props
-}: React.ComponentProps<typeof NextThemesProvider>) {
+type Theme = "light" | "dark" | "system"
+type ResolvedTheme = Exclude<Theme, "system">
+
+type ThemeContextValue = {
+  resolvedTheme: ResolvedTheme
+  setTheme: (theme: Theme) => void
+}
+
+const ThemeContext = React.createContext<ThemeContextValue | null>(null)
+
+function isTheme(value: string | null): value is Theme {
+  return value === "light" || value === "dark" || value === "system"
+}
+
+function getStoredTheme(): Theme {
+  if (typeof window === "undefined") {
+    return "system"
+  }
+
+  try {
+    const storedTheme = window.localStorage.getItem("theme")
+    return isTheme(storedTheme) ? storedTheme : "system"
+  } catch {
+    return "system"
+  }
+}
+
+function getSystemTheme(): ResolvedTheme {
+  return typeof window !== "undefined" &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light"
+}
+
+function disableTransitions() {
+  const style = document.createElement("style")
+  style.textContent =
+    "*,*::before,*::after{-webkit-transition:none!important;-moz-transition:none!important;-o-transition:none!important;-ms-transition:none!important;transition:none!important}"
+  document.head.appendChild(style)
+  window.getComputedStyle(document.body)
+  window.setTimeout(() => style.remove(), 1)
+}
+
+function ThemeProvider({ children }: React.PropsWithChildren) {
+  const [theme, setThemeState] = React.useState<Theme>(getStoredTheme)
+  const [systemTheme, setSystemTheme] =
+    React.useState<ResolvedTheme>(getSystemTheme)
+
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    const updateSystemTheme = () => {
+      setSystemTheme(mediaQuery.matches ? "dark" : "light")
+    }
+    const updateStoredTheme = (event: StorageEvent) => {
+      if (event.key === "theme") {
+        setThemeState(isTheme(event.newValue) ? event.newValue : "system")
+      }
+    }
+
+    updateSystemTheme()
+    mediaQuery.addEventListener("change", updateSystemTheme)
+    window.addEventListener("storage", updateStoredTheme)
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateSystemTheme)
+      window.removeEventListener("storage", updateStoredTheme)
+    }
+  }, [])
+
+  const setTheme = React.useCallback((nextTheme: Theme) => {
+    setThemeState(nextTheme)
+    try {
+      window.localStorage.setItem("theme", nextTheme)
+    } catch {
+      // Theme changes still apply when browser storage is unavailable.
+    }
+  }, [])
+
+  const resolvedTheme = theme === "system" ? systemTheme : theme
+
+  React.useEffect(() => {
+    disableTransitions()
+    const root = document.documentElement
+    root.classList.remove("light", "dark")
+    root.classList.add(resolvedTheme)
+    root.style.colorScheme = resolvedTheme
+  }, [resolvedTheme])
+
+  const value = React.useMemo(
+    () => ({ resolvedTheme, setTheme }),
+    [resolvedTheme, setTheme]
+  )
+
   return (
-    <NextThemesProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-      {...props}
-    >
+    <ThemeContext.Provider value={value}>
       <ThemeHotkey />
       {children}
-    </NextThemesProvider>
+    </ThemeContext.Provider>
   )
+}
+
+function useTheme() {
+  const context = React.useContext(ThemeContext)
+  if (!context) {
+    throw new Error("useTheme must be used within ThemeProvider")
+  }
+  return context
 }
 
 function isTypingTarget(target: EventTarget | null) {

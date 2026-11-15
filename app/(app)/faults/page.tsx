@@ -2,6 +2,7 @@ import Link from "next/link"
 
 import { EmptyUserFaults } from "@/components/illustrations"
 import { RepairProgress, StatusChip } from "@/components/faults"
+import { getRelativeTime } from "@/lib/faults"
 import { createClient } from "@/lib/supabase/server"
 import { FAULT_STATUSES, isFaultStatus, STATUS_LABELS } from "@/types/fault"
 import type { FaultStatus } from "@/types/fault"
@@ -35,38 +36,6 @@ const FILTER_OPTIONS = [
     matches: (status: FaultStatus) => status === resolvedStatus,
   },
 ] as const
-
-function getRelativeTime(dateValue: string) {
-  const elapsedSeconds = Math.round(
-    (Date.now() - new Date(dateValue).getTime()) / 1000,
-  )
-
-  if (Math.abs(elapsedSeconds) < 60) {
-    return "just now"
-  }
-
-  const relativeTime = new Intl.RelativeTimeFormat("en", { numeric: "auto" })
-  const units = [
-    { length: 60 * 60 * 24 * 365, name: "year" },
-    { length: 60 * 60 * 24 * 30, name: "month" },
-    { length: 60 * 60 * 24, name: "day" },
-    { length: 60 * 60, name: "hour" },
-    { length: 60, name: "minute" },
-  ] as const
-
-  const absoluteElapsedSeconds = Math.abs(elapsedSeconds)
-  const unit = units.find(({ length }) => absoluteElapsedSeconds >= length)
-
-  if (!unit) {
-    return relativeTime.format(-1, "minute")
-  }
-
-  return relativeTime.format(
-    -Math.sign(elapsedSeconds) *
-      Math.round(absoluteElapsedSeconds / unit.length),
-    unit.name,
-  )
-}
 
 function getAssignmentText(
   status: FaultStatus,
@@ -242,14 +211,19 @@ export default async function FaultsPage({
             return (
               <li
                 key={fault.id}
-                className={`flex flex-col gap-4 rounded-[24px] border ${
+                className={`relative flex flex-col gap-4 rounded-[24px] border ${
                   fault.id === newFaultId ? "border-primary" : "border-border"
                 } bg-card p-5 shadow-[var(--shadow-floating)] dark:shadow-none sm:flex-row sm:items-center sm:justify-between`}
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3 sm:block">
                     <h2 className="min-w-0 text-base font-semibold text-card-foreground">
-                      {fault.title}
+                      <Link
+                        href={`/faults/${fault.id}`}
+                        className="after:absolute after:inset-0 after:content-[''] focus-visible:after:rounded-[24px] focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-ring"
+                      >
+                        {fault.title}
+                      </Link>
                     </h2>
                     <span className="shrink-0 sm:hidden">
                       <StatusChip status={fault.status} />
