@@ -76,7 +76,7 @@ User routes: /faults (My faults), /faults/new (report a fault), /faults/[id] (de
 
 ## UI rules
 
-The design canvas is the source of truth: https://claude.ai/artifact/KyZNJTpZLE4JfgAmcALGkU
+The design canvas boards located at assets/screens are the source of truth.
 
 - Match the relevant board exactly: layout, spacing, type sizes, colours, radii, shadows, states. Do not approximate or simplify unless asked.
 - Build desktop, tablet and mobile from the boards and the "Responsive rules" board. Breakpoints are 640 and 1024.

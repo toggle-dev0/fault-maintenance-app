@@ -60,6 +60,8 @@ export const isUserRole = (v: unknown): v is UserRole => isOneOf(USER_ROLES, v)
 export const isFaultCategory = (v: unknown): v is FaultCategory => isOneOf(FAULT_CATEGORIES, v)
 export const isFaultPriority = (v: unknown): v is FaultPriority => isOneOf(FAULT_PRIORITIES, v)
 export const isFaultStatus = (v: unknown): v is FaultStatus => isOneOf(FAULT_STATUSES, v)
+export const isFaultUpdateKind = (v: unknown): v is FaultUpdateKind =>
+  isOneOf(FAULT_UPDATE_KINDS, v)
 
 // Narrow a row from the database. Throws if the database ever returns a value
 // this file does not know about, which means the two have drifted apart.
