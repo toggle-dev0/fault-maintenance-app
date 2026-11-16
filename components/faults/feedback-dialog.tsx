@@ -94,7 +94,7 @@ export function FeedbackDialog({
         aria-labelledby="feedback-dialog-title"
         finalFocus={() => triggerRef.current}
         showCloseButton={false}
-        className="inset-x-0 top-auto bottom-0 left-0 w-full max-w-none translate-x-0 translate-y-0 gap-0 rounded-t-[24px] rounded-b-none border border-border bg-card px-6 pt-3 pb-6 text-foreground shadow-[var(--shadow-floating)] dark:shadow-none sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-[480px] sm:max-w-[480px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[24px] sm:p-8"
+        className="inset-x-0 top-auto bottom-0 left-0 max-h-[calc(100dvh-2rem)] w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-t-[24px] rounded-b-none border border-border bg-card px-6 pt-3 pb-6 text-foreground shadow-[var(--shadow-floating)] dark:shadow-none sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-[480px] sm:max-w-[480px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[24px] sm:p-8"
       >
         <div
           aria-hidden="true"
@@ -182,7 +182,7 @@ export function FeedbackDialog({
               onChange={(event) => setComment(event.target.value)}
               maxLength={FEEDBACK_COMMENT_MAX}
               rows={4}
-              className="mt-2 min-h-[120px] rounded-[16px] border-transparent bg-input/70 p-4 text-base text-foreground sm:min-h-[156px]"
+              className="mt-2 min-h-[120px] max-h-[240px] overflow-y-auto rounded-[16px] border-transparent bg-input/70 p-4 text-base text-foreground sm:min-h-[156px]"
             />
           </div>
 

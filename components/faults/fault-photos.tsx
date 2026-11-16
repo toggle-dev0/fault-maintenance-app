@@ -9,6 +9,8 @@ type Photo = {
   signedUrl: string | null
 }
 
+const photoErrorMessage = "Unable to load this photo."
+
 export default function FaultPhotos({
   faultId,
   photos,
@@ -45,17 +47,25 @@ function FaultPhoto({
   total: number
 }) {
   const [signedUrl, setSignedUrl] = useState(photo.signedUrl)
-  const [error, setError] = useState(
-    photo.signedUrl ? null : "Unable to load this photo."
-  )
+  const [error, setError] = useState(photo.signedUrl ? null : photoErrorMessage)
   const [isPending, startTransition] = useTransition()
 
   function retry() {
     startTransition(async () => {
-      const result = await retryFaultPhoto(faultId, photo.path)
-      setSignedUrl(result.signedUrl)
-      setError(result.error)
+      try {
+        const result = await retryFaultPhoto(faultId, photo.path)
+        setSignedUrl(result.signedUrl)
+        setError(result.error)
+      } catch {
+        setSignedUrl(null)
+        setError(photoErrorMessage)
+      }
     })
+  }
+
+  function handleImageError() {
+    setSignedUrl(null)
+    setError(photoErrorMessage)
   }
 
   if (!signedUrl) {
@@ -96,6 +106,7 @@ function FaultPhoto({
         width={168}
         height={120}
         loading="lazy"
+        onError={handleImageError}
         className="h-full w-full object-cover"
       />
     </a>
