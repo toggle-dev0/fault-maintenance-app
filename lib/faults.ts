@@ -1,3 +1,5 @@
+export const FEEDBACK_COMMENT_MAX = 1000
+
 export function formatFaultRef(refNumber: number) {
   return `F-${String(refNumber).padStart(4, "0")}`
 }

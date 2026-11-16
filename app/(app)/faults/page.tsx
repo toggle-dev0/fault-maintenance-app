@@ -80,7 +80,7 @@ export default async function FaultsPage({
   const { data, error } = await supabase
     .from("faults")
     .select(
-      "id, title, building, location_detail, created_at, status, assigned_technician:profiles!faults_assigned_to_fkey(display_name)",
+      "id, title, building, location_detail, created_at, status, fault_feedback(id), assigned_technician:profiles!faults_assigned_to_fkey(display_name)",
     )
     .order("created_at", { ascending: false })
     .limit(100)
@@ -241,6 +241,15 @@ export default async function FaultsPage({
                   <p className="mt-3 text-sm text-muted-foreground sm:hidden">
                     {assignmentText}
                   </p>
+                  {fault.status === resolvedStatus &&
+                  fault.fault_feedback === null ? (
+                    <Link
+                      href={`/faults/${fault.id}?feedback=1`}
+                      className="relative z-10 mt-3 inline-flex h-11 items-center justify-center rounded-[16px] border border-border px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      Leave feedback
+                    </Link>
+                  ) : null}
                 </div>
 
                 <div className="hidden min-w-40 flex-col items-end gap-2 sm:flex">
