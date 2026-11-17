@@ -57,7 +57,7 @@ export default function AppHeader({
             <Button
               type="submit"
               variant="ghost"
-              className="h-10 rounded-[12px] px-2.5 text-sm sm:px-3"
+              className="h-11 rounded-[12px] px-2.5 text-sm sm:px-3 lg:h-10"
             >
               Log out
             </Button>

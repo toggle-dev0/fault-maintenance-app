@@ -168,11 +168,24 @@ export async function createTechnician(
   }
 
   if (!profileUpdated) {
+    let cleanupSucceeded = false
     try {
-      await adminClient.auth.admin.deleteUser(createdUser.id)
+      const { error: deleteError } = await adminClient.auth.admin.deleteUser(
+        createdUser.id
+      )
+      cleanupSucceeded = !deleteError
     } catch {
-      return getGenericFailure()
+      cleanupSucceeded = false
     }
+
+    if (!cleanupSucceeded) {
+      return {
+        fieldErrors: {},
+        formError: `The account for ${parsed.data.email} was created, but cleanup could not be confirmed. Ask an administrator to check the account and delete it or finish technician setup before retrying.`,
+        account: null,
+      }
+    }
+
     return getGenericFailure()
   }
 
