@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { logoutAction } from "@/lib/actions"
 import { createClient } from "@/lib/supabase/server"
+import { USER_ROLES } from "@/types/fault"
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -26,7 +27,11 @@ export default async function HomePage() {
 
   const displayName = profile?.display_name ?? claims.email ?? "User"
 
-  if (profile?.role === "user") {
+  if (profile?.role === USER_ROLES[2]) {
+    redirect("/admin")
+  }
+
+  if (profile?.role === USER_ROLES[0]) {
     redirect("/faults")
   }
 
