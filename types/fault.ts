@@ -16,6 +16,12 @@ export type FaultPriority = (typeof FAULT_PRIORITIES)[number]
 export type FaultStatus = (typeof FAULT_STATUSES)[number]
 export type FaultUpdateKind = (typeof FAULT_UPDATE_KINDS)[number]
 
+export const ROLE_LABELS: Record<UserRole, string> = {
+  [USER_ROLES[0]]: "User",
+  [USER_ROLES[1]]: "Technician",
+  [USER_ROLES[2]]: "Admin",
+}
+
 export const CATEGORY_LABELS: Record<FaultCategory, string> = {
   furniture: "Furniture",
   electrical: "Electrical",

@@ -61,6 +61,8 @@ Default landing by role after login: user goes to My faults, technician to My as
 
 User routes: /faults (My faults), /faults/new (report a fault), /faults/[id] (details). / redirects by role.
 
+Admin routes: /admin (landing), /admin/staff (technician accounts). Technician accounts are created by admins only, with a one-time password and app_metadata.must_change_password = true.
+
 ## Roles, data and security rules
 
 - The database enforces access. Row Level Security is on for every table, and policies and triggers live in `supabase/migrations/`.
