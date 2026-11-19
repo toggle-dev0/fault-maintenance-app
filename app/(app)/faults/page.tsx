@@ -2,6 +2,7 @@ import Link from "next/link"
 
 import { EmptyUserFaults } from "@/components/illustrations"
 import { RepairProgress, StatusChip } from "@/components/faults"
+import { requireReadyUser } from "@/lib/auth/session"
 import { getRelativeTime } from "@/lib/faults"
 import { createClient } from "@/lib/supabase/server"
 import { FAULT_STATUSES, isFaultStatus, STATUS_LABELS } from "@/types/fault"
@@ -62,6 +63,8 @@ export default async function FaultsPage({
     cleanup?: string | string[]
   }>
 }) {
+  await requireReadyUser()
+
   const params = await searchParams
   const requestedFilter = params.filter
   const newFaultId =

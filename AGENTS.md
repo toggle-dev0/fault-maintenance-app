@@ -60,8 +60,10 @@ proxy.ts        refreshes the Supabase session only
 Default landing by role after login: user goes to My faults, technician to My assignments, admin to Faults overview. Screens compose components and call server code. They hold no business rules.
 
 User routes: /faults (My faults), /faults/new (report a fault), /faults/[id] (details). / redirects by role.
-
+cht
 Admin routes: /admin (landing), /admin/staff (technician accounts). Technician accounts are created by admins only, with a one-time password and app_metadata.must_change_password = true.
+
+Every protected page starts with requireReadyUser() from lib/auth/session.ts. Accounts flagged must_change_password are redirected to /account/password until they change it.
 
 ## Roles, data and security rules
 

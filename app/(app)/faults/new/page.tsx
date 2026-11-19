@@ -1,8 +1,11 @@
 import Link from "next/link"
 
 import { ReportFaultForm } from "@/components/faults"
+import { requireReadyUser } from "@/lib/auth/session"
 
-export default function NewFaultPage() {
+export default async function NewFaultPage() {
+  await requireReadyUser()
+
   return (
     <main className="mx-auto w-full px-4 pb-32 pt-6 sm:px-6 sm:pb-12 sm:pt-8 lg:max-w-[800px] lg:px-0">
       <Link

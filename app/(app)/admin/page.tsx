@@ -1,7 +1,11 @@
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 
-export default function AdminPage() {
+import { requireReadyUser } from "@/lib/auth/session"
+
+export default async function AdminPage() {
+  await requireReadyUser()
+
   return (
     <main className="mx-auto w-full max-w-[1200px] px-4 pt-6 pb-12 sm:px-6 sm:pt-8 lg:px-10 lg:pt-10">
       <h1 className="font-heading text-[30px] leading-tight tracking-[-0.04em] text-foreground sm:text-[32px] lg:text-[34px]">
