@@ -1,11 +1,11 @@
 import AddTechnicianForm from "@/components/admin/add-technician-form"
-import { requireReadyUser } from "@/lib/auth/session"
+import { requireAdmin } from "@/lib/auth/session"
 import { getRelativeTime } from "@/lib/faults"
 import { createClient } from "@/lib/supabase/server"
 import { isUserRole, ROLE_LABELS, USER_ROLES } from "@/types/fault"
 
 export default async function StaffPage() {
-  await requireReadyUser()
+  await requireAdmin()
 
   const supabase = await createClient()
   const { data: staff, error } = await supabase

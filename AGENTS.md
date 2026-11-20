@@ -65,6 +65,8 @@ Admin routes: /admin (landing), /admin/staff (technician accounts). Technician a
 
 Protected pages that require a completed password change start with requireReadyUser() from lib/auth/session.ts. The /account/password page must use requireUser() so accounts flagged must_change_password can reach the form; requireReadyUser() redirects those accounts there.
 
+Admin routes: /admin (Faults overview), /admin/faults/[id] (admin details), /admin/staff. Every admin page calls requireAdmin() itself; the layout check is not enough.
+
 ## Roles, data and security rules
 
 - The database enforces access. Row Level Security is on for every table, and policies and triggers live in `supabase/migrations/`.

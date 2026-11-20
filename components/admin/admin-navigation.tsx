@@ -11,6 +11,8 @@ export default function AdminNavigation({
   const pathname = usePathname()
   const staffIsActive =
     pathname === "/admin/staff" || pathname.startsWith("/admin/staff/")
+  const overviewIsActive =
+    pathname === "/admin" || pathname.startsWith("/admin/faults/")
 
   return (
     <nav
@@ -19,6 +21,19 @@ export default function AdminNavigation({
         mobile ? "px-4 py-2 sm:px-6 lg:hidden" : "hidden px-4 lg:block"
       }
     >
+      <Link
+        href="/admin"
+        aria-current={overviewIsActive ? "page" : undefined}
+        className={`flex ${
+          mobile ? "min-h-11" : "min-h-12"
+        } items-center rounded-[12px] px-3 text-sm font-semibold transition-colors ${
+          overviewIsActive
+            ? "bg-primary/10 text-primary"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        }`}
+      >
+        Overview
+      </Link>
       <Link
         href="/admin/staff"
         aria-current={staffIsActive ? "page" : undefined}
