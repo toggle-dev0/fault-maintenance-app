@@ -86,20 +86,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const activeStatusIndex = activeStatus
     ? FAULT_STATUSES.indexOf(activeStatus)
     : -1
-  const totalCount =
-    activeStatusIndex >= 0
-      ? statusCounts[activeStatusIndex]
-      : statusCounts.reduce((sum, count) => sum + count, 0)
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
-
-  if (page > totalPages) {
-    const query = new URLSearchParams()
-    if (activeStatus) {
-      query.set("status", activeStatus)
-    }
-    query.set("page", String(totalPages))
-    redirect(`/admin?${query.toString()}`)
-  }
 
   let faultQuery = supabase
     .from("faults")
@@ -116,6 +102,21 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   }
 
   const faultResult = await faultQuery
+
+  const totalCount =
+    activeStatusIndex >= 0
+      ? statusCounts[activeStatusIndex]
+      : (faultResult.count ?? 0)
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+
+  if (page > totalPages) {
+    const query = new URLSearchParams()
+    if (activeStatus) {
+      query.set("status", activeStatus)
+    }
+    query.set("page", String(totalPages))
+    redirect(`/admin?${query.toString()}`)
+  }
 
   if (faultResult.error) {
     throw faultResult.error
