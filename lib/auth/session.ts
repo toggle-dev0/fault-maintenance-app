@@ -1,6 +1,7 @@
-import { redirect } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
+import { USER_ROLES } from "@/types/fault"
 
 export type CurrentUser = {
   id: string
@@ -39,6 +40,26 @@ export async function requireReadyUser(): Promise<CurrentUser> {
 
   if (user.mustChangePassword) {
     redirect("/account/password")
+  }
+
+  return user
+}
+
+export async function requireAdmin(): Promise<CurrentUser> {
+  const user = await requireReadyUser()
+  const supabase = await createClient()
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  if (profile?.role !== USER_ROLES[2]) {
+    notFound()
   }
 
   return user
