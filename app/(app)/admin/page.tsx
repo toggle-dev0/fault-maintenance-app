@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 
 import { EmptyUserFaults } from "@/components/illustrations"
 import { StatusChip } from "@/components/faults"
@@ -16,6 +17,8 @@ import {
 import type { FaultPriority, FaultStatus } from "@/types/fault"
 
 const pageSize = 25
+const maxPostgresRangeEnd = 2_147_483_647
+const maxPage = Math.floor((maxPostgresRangeEnd + 1) / pageSize)
 const reportedStatus = FAULT_STATUSES[0]
 const criticalPriority = FAULT_PRIORITIES[2]
 
@@ -32,7 +35,12 @@ function parsePage(value: string | string[] | undefined) {
   }
 
   const page = Number(value)
-  return Number.isInteger(page) && page >= 1 && page <= 1000 ? page : 1
+  return Number.isSafeInteger(page) &&
+    page >= 1 &&
+    page <= maxPage &&
+    (page - 1) * pageSize <= maxPostgresRangeEnd
+    ? page
+    : 1
 }
 
 function getPriorityLabel(priority: string): FaultPriority {
@@ -59,6 +67,40 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const page = parsePage(params.page)
   const supabase = await createClient()
 
+  const countResults = await Promise.all(
+    FAULT_STATUSES.map((status) =>
+      supabase
+        .from("faults")
+        .select("id", { count: "exact", head: true })
+        .eq("status", status)
+    )
+  )
+
+  for (const result of countResults) {
+    if (result.error) {
+      throw result.error
+    }
+  }
+
+  const statusCounts = countResults.map((result) => result.count ?? 0)
+  const activeStatusIndex = activeStatus
+    ? FAULT_STATUSES.indexOf(activeStatus)
+    : -1
+  const totalCount =
+    activeStatusIndex >= 0
+      ? statusCounts[activeStatusIndex]
+      : statusCounts.reduce((sum, count) => sum + count, 0)
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+
+  if (page > totalPages) {
+    const query = new URLSearchParams()
+    if (activeStatus) {
+      query.set("status", activeStatus)
+    }
+    query.set("page", String(totalPages))
+    redirect(`/admin?${query.toString()}`)
+  }
+
   let faultQuery = supabase
     .from("faults")
     .select(
@@ -73,23 +115,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     faultQuery = faultQuery.eq("status", activeStatus)
   }
 
-  const [countResults, faultResult] = await Promise.all([
-    Promise.all(
-      FAULT_STATUSES.map((status) =>
-        supabase
-          .from("faults")
-          .select("id", { count: "exact", head: true })
-          .eq("status", status)
-      )
-    ),
-    faultQuery,
-  ])
-
-  for (const result of countResults) {
-    if (result.error) {
-      throw result.error
-    }
-  }
+  const faultResult = await faultQuery
 
   if (faultResult.error) {
     throw faultResult.error
@@ -100,8 +126,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     priority: getPriorityLabel(fault.priority),
     status: getFaultStatus(fault.status),
   }))
-  const totalCount = faultResult.count ?? 0
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
 
   function pageHref(targetPage: number) {
     const query = new URLSearchParams()
