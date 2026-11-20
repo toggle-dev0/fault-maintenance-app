@@ -1,57 +1,28 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Star } from "lucide-react"
 
-import { FeedbackDialog, StatusChip } from "@/components/faults"
-import FaultPhotos from "@/components/faults/fault-photos"
+import {
+  FaultDescriptionSection,
+  FaultDetailsSection,
+  FaultFeedbackSection,
+  FaultRepairLogSection,
+  StatusChip,
+} from "@/components/faults"
 import { requireReadyUser } from "@/lib/auth/session"
-import { formatFaultRef, getRelativeTime } from "@/lib/faults"
+import { formatFaultRef } from "@/lib/faults"
 import { createClient } from "@/lib/supabase/server"
 import {
-  CATEGORY_LABELS,
   FAULT_PRIORITIES,
   FAULT_STATUSES,
-  FAULT_UPDATE_KINDS,
   isFaultCategory,
   isFaultPriority,
   isFaultStatus,
-  isFaultUpdateKind,
   PRIORITY_LABELS,
-  STATUS_LABELS,
 } from "@/types/fault"
 
 const UUID_PATTERN = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i
-const reportedKind = FAULT_UPDATE_KINDS[0]
-const assignedKind = FAULT_UPDATE_KINDS[1]
-const statusChangedKind = FAULT_UPDATE_KINDS[2]
-const noteKind = FAULT_UPDATE_KINDS[3]
 const criticalPriority = FAULT_PRIORITIES[2]
 const resolvedStatus = FAULT_STATUSES[3]
-
-function AbsoluteTime({ dateValue }: { dateValue: string }) {
-  return (
-    <time dateTime={dateValue} title={new Date(dateValue).toLocaleString()}>
-      {getRelativeTime(dateValue)}
-    </time>
-  )
-}
-
-function DetailRow({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-t border-border py-3 first:border-t-0">
-      <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="text-right text-sm font-semibold text-foreground">
-        {children}
-      </dd>
-    </div>
-  )
-}
 
 export default async function FaultDetailsPage({
   params,
@@ -156,10 +127,6 @@ export default async function FaultDetailsPage({
     })
   }
 
-  const location = fault.location_detail
-    ? `${fault.building}, ${fault.location_detail}`
-    : fault.building
-
   return (
     <main className="mx-auto w-full max-w-[1200px] px-4 pt-6 pb-12 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
       <Link
@@ -208,184 +175,36 @@ export default async function FaultDetailsPage({
       ) : null}
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6">
-        <section
-          aria-labelledby="description-heading"
-          className="rounded-[24px] border border-border bg-card p-5 shadow-[var(--shadow-floating)] sm:p-8 lg:col-start-1 lg:row-start-1 dark:shadow-none"
-        >
-          <h2
-            id="description-heading"
-            className="text-sm font-semibold tracking-wide text-muted-foreground uppercase"
-          >
-            Description
-          </h2>
-          <p className="mt-4 text-base leading-7 whitespace-pre-wrap text-card-foreground">
-            {fault.description}
-          </p>
-          {photoResults.length > 0 ? (
-            <FaultPhotos faultId={fault.id} photos={photoResults} />
-          ) : null}
-        </section>
-
-        <section
-          aria-labelledby="details-heading"
-          className="rounded-[24px] border border-border bg-card p-5 shadow-[var(--shadow-floating)] sm:p-8 lg:col-start-2 lg:row-start-1 dark:shadow-none"
-        >
-          <h2
-            id="details-heading"
-            className="text-sm font-semibold tracking-wide text-muted-foreground uppercase"
-          >
-            Details
-          </h2>
-          <dl className="mt-3 border-b border-border">
-            <DetailRow label="Category">
-              {CATEGORY_LABELS[fault.category]}
-            </DetailRow>
-            <DetailRow label="Location">{location}</DetailRow>
-            <DetailRow label="Reported by">
-              {fault.reporter?.display_name ?? "Maintenance team"}
-            </DetailRow>
-            <DetailRow label="Reported">
-              <AbsoluteTime dateValue={fault.created_at} />
-            </DetailRow>
-            <DetailRow label="Technician">
-              {fault.assigned_technician?.display_name ?? "Not assigned yet"}
-            </DetailRow>
-            {fault.status === resolvedStatus ? (
-              <>
-                <DetailRow label="Resolved">
-                  <AbsoluteTime
-                    dateValue={fault.resolved_at ?? fault.updated_at}
-                  />
-                </DetailRow>
-                <DetailRow label="Fixed by">
-                  {fault.assigned_technician?.display_name ??
-                    "Maintenance team"}
-                </DetailRow>
-              </>
-            ) : null}
-          </dl>
-        </section>
-
-        {canLeaveFeedback ? (
-          <section
-            aria-labelledby="repair-complete-heading"
-            className="rounded-[24px] border border-border bg-card p-5 shadow-[var(--shadow-floating)] sm:p-8 lg:col-start-2 lg:row-start-2 dark:shadow-none"
-          >
-            <h2
-              id="repair-complete-heading"
-              className="font-heading text-[28px] leading-tight tracking-[-0.04em] text-foreground"
-            >
-              Repair complete
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Tell us how the repair went. It helps the team improve.
-            </p>
-            <div className="mt-5">
-              <FeedbackDialog
-                faultId={fault.id}
-                faultTitle={fault.title}
-                initiallyOpen={openFeedbackInitially}
-              />
-            </div>
-          </section>
-        ) : null}
-
-        {feedback ? (
-          <section
-            aria-labelledby="feedback-heading"
-            className="rounded-[24px] border border-border bg-card p-5 shadow-[var(--shadow-floating)] sm:p-8 lg:col-start-2 lg:row-start-2 dark:shadow-none"
-          >
-            <h2
-              id="feedback-heading"
-              className="font-heading text-[28px] leading-tight tracking-[-0.04em] text-foreground"
-            >
-              Feedback
-            </h2>
-            <p className="mt-3 font-semibold text-foreground">
-              Rated {feedback.rating} out of 5
-            </p>
-            <div aria-hidden="true" className="mt-2 flex items-center gap-1">
-              {Array.from({ length: 5 }, (_, index) => (
-                <Star
-                  key={index}
-                  className={
-                    index < feedback.rating
-                      ? "size-5 fill-primary text-primary"
-                      : "size-5 fill-transparent text-muted-foreground"
-                  }
-                />
-              ))}
-            </div>
-            {feedback.comment ? (
-              <p className="mt-4 text-sm leading-6 whitespace-pre-wrap text-card-foreground">
-                {feedback.comment}
-              </p>
-            ) : null}
-          </section>
-        ) : null}
-
-        <section
-          aria-labelledby="repair-log-heading"
-          className="rounded-[24px] border border-border bg-card p-5 shadow-[var(--shadow-floating)] sm:p-8 lg:col-start-1 lg:row-start-2 dark:shadow-none"
-        >
-          <h2
-            id="repair-log-heading"
-            className="text-sm font-semibold tracking-wide text-muted-foreground uppercase"
-          >
-            Repair log
-          </h2>
-          {updates.length > 0 ? (
-            <ol className="mt-5 space-y-5">
-              {updates.map((update) => {
-                const authorName =
-                  update.author?.display_name ?? "Maintenance team"
-                let summary = "Repair update"
-                let note: string | null = null
-
-                if (isFaultUpdateKind(update.kind)) {
-                  if (update.kind === reportedKind) {
-                    summary = STATUS_LABELS[FAULT_STATUSES[0]]
-                  } else if (update.kind === assignedKind) {
-                    summary = `Assigned to ${update.assignee?.display_name ?? "Maintenance team"}`
-                  } else if (update.kind === statusChangedKind) {
-                    summary = isFaultStatus(update.to_status)
-                      ? STATUS_LABELS[update.to_status]
-                      : "Status changed"
-                  } else if (update.kind === noteKind) {
-                    summary = "Repair note"
-                    note = update.note
-                  }
-                }
-
-                return (
-                  <li
-                    key={update.id}
-                    className="relative pl-8 before:absolute before:top-2 before:bottom-[-20px] before:left-[7px] before:w-px before:bg-border last:before:hidden"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="absolute top-1.5 left-0 size-4 rounded-full bg-primary"
-                    />
-                    <p className="font-semibold text-foreground">{summary}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {authorName},{" "}
-                      <AbsoluteTime dateValue={update.created_at} />
-                    </p>
-                    {note ? (
-                      <p className="mt-2 text-sm leading-6 whitespace-pre-wrap text-card-foreground">
-                        {note}
-                      </p>
-                    ) : null}
-                  </li>
-                )
-              })}
-            </ol>
-          ) : (
-            <p className="mt-4 text-sm text-muted-foreground">
-              No repair updates yet.
-            </p>
-          )}
-        </section>
+        <FaultDescriptionSection
+          faultId={fault.id}
+          description={fault.description}
+          photos={photoResults}
+          className="lg:col-start-1 lg:row-start-1"
+        />
+        <FaultDetailsSection
+          category={fault.category}
+          building={fault.building}
+          locationDetail={fault.location_detail}
+          reporterName={fault.reporter?.display_name ?? null}
+          createdAt={fault.created_at}
+          status={fault.status}
+          technicianName={fault.assigned_technician?.display_name ?? null}
+          resolvedAt={fault.resolved_at}
+          updatedAt={fault.updated_at}
+          className="lg:col-start-2 lg:row-start-1"
+        />
+        <FaultFeedbackSection
+          feedback={feedback}
+          faultId={fault.id}
+          faultTitle={fault.title}
+          canLeaveFeedback={canLeaveFeedback}
+          initiallyOpen={openFeedbackInitially}
+          className="lg:col-start-2 lg:row-start-2"
+        />
+        <FaultRepairLogSection
+          updates={updates}
+          className="lg:col-start-1 lg:row-start-2"
+        />
       </div>
     </main>
   )
