@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import AppHeader from "@/components/app-shell/app-header"
 import AdminNavigation from "@/components/admin/admin-navigation"
 import { LogoWordmark } from "@/components/illustrations"
+import { requireReadyUser } from "@/lib/auth/session"
 import { createClient } from "@/lib/supabase/server"
 import { USER_ROLES } from "@/types/fault"
 
@@ -12,6 +13,8 @@ export default async function AdminLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  await requireReadyUser()
+
   const supabase = await createClient()
   const { data: authData } = await supabase.auth.getClaims()
   const userId = authData?.claims?.sub

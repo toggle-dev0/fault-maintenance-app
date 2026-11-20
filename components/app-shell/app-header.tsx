@@ -53,6 +53,12 @@ export default function AppHeader({
           >
             {getInitials(displayName)}
           </span>
+          <Link
+            href="/account/password"
+            className="inline-flex h-11 items-center justify-center rounded-[12px] px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-3"
+          >
+            Account
+          </Link>
           <form action={logoutAction}>
             <Button
               type="submit"

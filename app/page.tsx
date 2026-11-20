@@ -2,10 +2,13 @@ import { redirect } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { logoutAction } from "@/lib/actions"
+import { requireReadyUser } from "@/lib/auth/session"
 import { createClient } from "@/lib/supabase/server"
 import { USER_ROLES } from "@/types/fault"
 
 export default async function HomePage() {
+  await requireReadyUser()
+
   const supabase = await createClient()
   const { data } = await supabase.auth.getClaims()
   const claims = data?.claims

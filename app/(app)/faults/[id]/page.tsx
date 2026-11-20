@@ -4,6 +4,7 @@ import { Star } from "lucide-react"
 
 import { FeedbackDialog, StatusChip } from "@/components/faults"
 import FaultPhotos from "@/components/faults/fault-photos"
+import { requireReadyUser } from "@/lib/auth/session"
 import { formatFaultRef, getRelativeTime } from "@/lib/faults"
 import { createClient } from "@/lib/supabase/server"
 import {
@@ -59,6 +60,8 @@ export default async function FaultDetailsPage({
   params: Promise<{ id: string }>
   searchParams: Promise<{ feedback?: string | string[] }>
 }) {
+  await requireReadyUser()
+
   const { id } = await params
   const search = await searchParams
 
