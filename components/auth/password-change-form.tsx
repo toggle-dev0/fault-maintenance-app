@@ -45,7 +45,14 @@ export function PasswordChangeForm({ action }: PasswordChangeFormProps) {
     formData.set("confirmPassword", values.confirmPassword)
 
     startTransition(async () => {
-      const result = await action(formData)
+      let result: ChangePasswordResult
+
+      try {
+        result = await action(formData)
+      } catch {
+        setFormError("Unable to update your password. Please try again.")
+        return
+      }
 
       for (const field of [
         "currentPassword",

@@ -13,7 +13,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 
 const adminUpdateFailure =
-  "Your password was changed, but we could not finish setting up your account. Please log out and log in again."
+  "Your password was changed, but we could not finish setting up your account. Please change it again to complete setup."
 
 function getFieldErrors(
   error: z.ZodError
