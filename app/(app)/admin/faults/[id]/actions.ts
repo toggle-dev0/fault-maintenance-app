@@ -53,7 +53,7 @@ export async function assignFault(
   }
 
   const user = await getCurrentUser()
-  if (!user) {
+  if (!user || user.mustChangePassword) {
     return {
       fieldErrors: {},
       formError: "You do not have permission to do this.",

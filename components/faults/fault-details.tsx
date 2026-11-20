@@ -14,27 +14,25 @@ import {
   type FaultCategory,
   type FaultStatus,
 } from "@/types/fault"
+import type { Database } from "@/types/database.types"
 
 type Photo = {
   path: string
   signedUrl: string | null
 }
 
-type FaultUpdate = {
-  id: string
-  kind: string
-  note: string | null
-  to_status: string | null
-  created_at: string
+type FaultUpdate = Pick<
+  Database["public"]["Tables"]["fault_updates"]["Row"],
+  "id" | "kind" | "note" | "to_status" | "created_at"
+> & {
   author: { display_name: string | null } | null
   assignee: { display_name: string | null } | null
 }
 
-type Feedback = {
-  rating: number
-  comment: string | null
-  created_at: string
-}
+type Feedback = Pick<
+  Database["public"]["Tables"]["fault_feedback"]["Row"],
+  "rating" | "comment" | "created_at"
+>
 
 type SectionProps = {
   className?: string

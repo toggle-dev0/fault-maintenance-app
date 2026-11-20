@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useState } from "react"
 import Link from "next/link"
 
 import {
@@ -13,15 +13,16 @@ import { cn } from "@/lib/utils"
 import {
   FAULT_PRIORITIES,
   FAULT_STATUSES,
+  isFaultPriority,
   PRIORITY_LABELS,
 } from "@/types/fault"
 import type { FaultPriority, FaultStatus } from "@/types/fault"
+import type { Database } from "@/types/database.types"
 
-type Technician = {
-  id: string
-  display_name: string | null
-  organization: string | null
-}
+type Technician = Pick<
+  Database["public"]["Tables"]["profiles"]["Row"],
+  "id" | "display_name" | "organization"
+>
 
 type FaultAssignmentPanelProps = {
   faultId: string
@@ -46,6 +47,8 @@ export function FaultAssignmentPanel({
   className,
 }: FaultAssignmentPanelProps) {
   const [state, formAction, pending] = useActionState(assignFault, initialState)
+  const [technicianId, setTechnicianId] = useState(assignedTechnicianId ?? "")
+  const [selectedPriority, setSelectedPriority] = useState(priority)
   const isReported = status === FAULT_STATUSES[0]
 
   return (
@@ -78,7 +81,8 @@ export function FaultAssignmentPanel({
               id="technicianId"
               name="technicianId"
               required
-              defaultValue={assignedTechnicianId ?? ""}
+              value={technicianId}
+              onChange={(event) => setTechnicianId(event.currentTarget.value)}
               aria-invalid={Boolean(state.fieldErrors.technicianId)}
               aria-describedby={
                 state.fieldErrors.technicianId
@@ -118,7 +122,13 @@ export function FaultAssignmentPanel({
               id="priority"
               name="priority"
               required
-              defaultValue={priority}
+              value={selectedPriority}
+              onChange={(event) => {
+                const value = event.currentTarget.value
+                if (isFaultPriority(value)) {
+                  setSelectedPriority(value)
+                }
+              }}
               aria-invalid={Boolean(state.fieldErrors.priority)}
               aria-describedby={
                 state.fieldErrors.priority ? "priority-error" : undefined
