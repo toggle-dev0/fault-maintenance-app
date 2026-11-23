@@ -38,6 +38,10 @@ export default async function HomePage() {
     redirect("/faults")
   }
 
+  if (profile?.role === USER_ROLES[1]) {
+    redirect("/assignments")
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-6">
       <div className="w-full max-w-md rounded-[24px] border border-border bg-card p-8 text-center shadow-[var(--shadow-floating)]">

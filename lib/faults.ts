@@ -4,6 +4,10 @@ export function formatFaultRef(refNumber: number) {
   return `F-${String(refNumber).padStart(4, "0")}`
 }
 
+export function getSevenDaysAgoIso() {
+  return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+}
+
 export function getRelativeTime(dateValue: string) {
   const elapsedSeconds = Math.round(
     (Date.now() - new Date(dateValue).getTime()) / 1000,
