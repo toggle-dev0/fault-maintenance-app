@@ -6,23 +6,18 @@ import { requireTechnician } from "@/lib/auth/session"
 import {
   formatFaultRef,
   getRelativeTime,
-  getSevenDaysAgoIso,
 } from "@/lib/faults"
-import { createClient } from "@/lib/supabase/server"
+import { loadAssignments } from "@/lib/faults/assignments"
 import {
   FAULT_PRIORITIES,
   FAULT_STATUSES,
-  isFaultPriority,
-  isFaultStatus,
   PRIORITY_LABELS,
 } from "@/types/fault"
-import type { FaultPriority, FaultStatus } from "@/types/fault"
-
-type AssignmentView = "active" | "todo" | "done"
 
 type AssignmentsPageProps = {
   searchParams: Promise<{
     view?: string | string[]
+    page?: string | string[]
   }>
 }
 
@@ -31,126 +26,22 @@ const inProgressStatus = FAULT_STATUSES[2]
 const resolvedStatus = FAULT_STATUSES[3]
 const criticalPriority = FAULT_PRIORITIES[2]
 
-function getPriority(priority: string): FaultPriority {
-  if (!isFaultPriority(priority)) {
-    throw new Error(`Fault has an unsupported priority: ${priority}`)
-  }
-  return priority
-}
-
-function getStatus(status: string): FaultStatus {
-  if (!isFaultStatus(status)) {
-    throw new Error(`Fault has an unsupported status: ${status}`)
-  }
-  return status
-}
-
 export default async function AssignmentsPage({
   searchParams,
 }: AssignmentsPageProps) {
   const user = await requireTechnician()
   const params = await searchParams
-  const requestedView = typeof params.view === "string" ? params.view : "active"
-  const activeView: AssignmentView =
-    requestedView === "todo" || requestedView === "done"
-      ? requestedView
-      : "active"
-
-  const supabase = await createClient()
-  const sevenDaysAgo = getSevenDaysAgoIso()
-
-  const [assignedCountResult, inProgressCountResult, doneCountResult] =
-    await Promise.all([
-      supabase
-        .from("faults")
-        .select("id", { count: "exact", head: true })
-        .eq("assigned_to", user.id)
-        .eq("status", assignedStatus),
-      supabase
-        .from("faults")
-        .select("id", { count: "exact", head: true })
-        .eq("assigned_to", user.id)
-        .eq("status", inProgressStatus),
-      supabase
-        .from("faults")
-        .select("id", { count: "exact", head: true })
-        .eq("assigned_to", user.id)
-        .eq("status", resolvedStatus)
-        .gte("resolved_at", sevenDaysAgo),
-    ])
-
-  for (const result of [
-    assignedCountResult,
-    inProgressCountResult,
-    doneCountResult,
-  ]) {
-    if (result.error) {
-      throw result.error
-    }
-  }
-
-  const assignedCount = assignedCountResult.count ?? 0
-  const inProgressCount = inProgressCountResult.count ?? 0
-  const doneCount = doneCountResult.count ?? 0
-  const activeCount = assignedCount + inProgressCount
-
-  let faultQuery
-  if (activeView === "todo") {
-    faultQuery = supabase
-      .from("faults")
-      .select(
-        "id, title, ref_number, building, location_detail, priority, status, created_at, resolved_at",
-      )
-      .eq("assigned_to", user.id)
-      .eq("status", assignedStatus)
-      .limit(100)
-  } else if (activeView === "done") {
-    faultQuery = supabase
-      .from("faults")
-      .select(
-        "id, title, ref_number, building, location_detail, priority, status, created_at, resolved_at",
-      )
-      .eq("assigned_to", user.id)
-      .eq("status", resolvedStatus)
-      .order("resolved_at", { ascending: false })
-      .limit(50)
-  } else {
-    faultQuery = supabase
-      .from("faults")
-      .select(
-        "id, title, ref_number, building, location_detail, priority, status, created_at, resolved_at",
-      )
-      .eq("assigned_to", user.id)
-      .in("status", [assignedStatus, inProgressStatus])
-      .limit(100)
-  }
-
-  const { data, error } = await faultQuery
-  if (error) {
-    throw error
-  }
-
-  const faults = (data ?? []).map((fault) => ({
-    ...fault,
-    priority: getPriority(fault.priority),
-    status: getStatus(fault.status),
-  }))
-
-  if (activeView === "active" || activeView === "todo") {
-    faults.sort((left, right) => {
-      const leftPriorityRank = FAULT_PRIORITIES.indexOf(left.priority)
-      const rightPriorityRank = FAULT_PRIORITIES.indexOf(right.priority)
-
-      if (leftPriorityRank !== rightPriorityRank) {
-        return rightPriorityRank - leftPriorityRank
-      }
-
-      return (
-        new Date(left.created_at).getTime() -
-        new Date(right.created_at).getTime()
-      )
-    })
-  }
+  const {
+    activeView,
+    faults,
+    assignedCount,
+    inProgressCount,
+    doneCount,
+    activeCount,
+    noAssignmentsAtAll,
+    page,
+    totalPages,
+  } = await loadAssignments(user.id, params.view, params.page)
 
   const tabs = [
     { value: "active" as const, label: "Active", count: activeCount },
@@ -158,8 +49,9 @@ export default async function AssignmentsPage({
     { value: "done" as const, label: "Done", count: doneCount },
   ]
 
-  const noAssignmentsAtAll =
-    assignedCount === 0 && inProgressCount === 0 && doneCount === 0
+  function pageHref(targetPage: number) {
+    return `/assignments?view=${activeView}&page=${targetPage}`
+  }
 
   return (
     <main className="mx-auto w-full max-w-[880px] px-4 pb-12 pt-8 sm:px-6 sm:pt-8 lg:px-0 lg:pt-10">
@@ -223,7 +115,7 @@ export default async function AssignmentsPage({
         </div>
       </nav>
 
-      {noAssignmentsAtAll ? (
+      {noAssignmentsAtAll && faults.length === 0 ? (
         <section className="mt-5 flex min-h-[360px] flex-col items-center justify-center rounded-[24px] border border-border bg-card px-6 py-10 text-center shadow-[var(--shadow-floating)] dark:shadow-none">
           <EmptyTechnicianAssignments
             aria-hidden="true"
@@ -241,8 +133,9 @@ export default async function AssignmentsPage({
           No assignments match this view.
         </p>
       ) : (
-        <ul className="mt-5 space-y-3">
-          {faults.map((fault) => {
+        <>
+          <ul className="mt-5 space-y-3">
+            {faults.map((fault) => {
             const isResolved = fault.status === resolvedStatus
             const isCritical = fault.priority === criticalPriority
             const timeLabel = isResolved
@@ -263,7 +156,7 @@ export default async function AssignmentsPage({
                     <div className="min-w-0">
                       <h2 className="text-base font-semibold text-card-foreground">
                         <Link
-                          href={`/assignments/${fault.id}`}
+                          href={`/faults/${fault.id}`}
                           className="hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                         >
                           {fault.title}
@@ -302,7 +195,7 @@ export default async function AssignmentsPage({
                     <StatusChip status={fault.status} />
                   </span>
                   <Link
-                    href={`/assignments/${fault.id}`}
+                    href={`/faults/${fault.id}`}
                     aria-label={
                       isResolved
                         ? `View ${fault.title}`
@@ -319,8 +212,39 @@ export default async function AssignmentsPage({
                 </div>
               </li>
             )
-          })}
-        </ul>
+            })}
+          </ul>
+          {totalPages > 1 ? (
+            <nav
+              aria-label="Assignment pages"
+              className="mt-5 flex items-center justify-between"
+            >
+              {page > 1 ? (
+                <Link
+                  href={pageHref(page - 1)}
+                  className="inline-flex h-11 min-w-11 items-center justify-center rounded-[12px] border border-border px-4 text-sm font-semibold text-foreground hover:bg-muted"
+                >
+                  Previous
+                </Link>
+              ) : (
+                <span />
+              )}
+              <span className="text-sm text-muted-foreground">
+                Page {page} of {totalPages}
+              </span>
+              {page < totalPages ? (
+                <Link
+                  href={pageHref(page + 1)}
+                  className="inline-flex h-11 min-w-11 items-center justify-center rounded-[12px] border border-border px-4 text-sm font-semibold text-foreground hover:bg-muted"
+                >
+                  Next
+                </Link>
+              ) : (
+                <span />
+              )}
+            </nav>
+          ) : null}
+        </>
       )}
     </main>
   )
