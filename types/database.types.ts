@@ -249,6 +249,20 @@ export type Database = {
     }
     Functions: {
       current_app_role: { Args: never; Returns: string }
+      get_technician_assignments: {
+        Args: { p_limit?: number; p_offset?: number; p_view?: string }
+        Returns: {
+          building: string
+          created_at: string
+          id: string
+          location_detail: string
+          priority: string
+          ref_number: number
+          resolved_at: string
+          status: string
+          title: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

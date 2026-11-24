@@ -64,3 +64,23 @@ export async function requireAdmin(): Promise<CurrentUser> {
 
   return user
 }
+
+export async function requireTechnician(): Promise<CurrentUser> {
+  const user = await requireReadyUser()
+  const supabase = await createClient()
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  if (profile?.role !== USER_ROLES[1]) {
+    notFound()
+  }
+
+  return user
+}

@@ -7,6 +7,7 @@ import { logoutAction } from "@/lib/actions"
 type AppHeaderProps = {
   displayName: string
   logoVisibility?: "all" | "mobile-only" | "none"
+  logoHref?: string
 }
 
 function getInitials(name: string) {
@@ -24,6 +25,7 @@ function getInitials(name: string) {
 export default function AppHeader({
   displayName,
   logoVisibility = "all",
+  logoHref = "/",
 }: AppHeaderProps) {
   const logoClassName =
     logoVisibility === "mobile-only" ? "shrink-0 lg:hidden" : "shrink-0"
@@ -33,7 +35,7 @@ export default function AppHeader({
       <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-10">
         <div className="flex min-w-0 flex-1 items-center">
           {logoVisibility !== "none" ? (
-            <Link href="/" aria-label="FixTrack home" className={logoClassName}>
+            <Link href={logoHref} aria-label="FixTrack home" className={logoClassName}>
               <LogoWordmark
                 aria-hidden="true"
                 className="h-8 w-28 sm:h-9 sm:w-[126px]"
